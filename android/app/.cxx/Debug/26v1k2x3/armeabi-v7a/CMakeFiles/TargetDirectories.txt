@@ -1,0 +1,2 @@
+C:/Users/HP/StudioProjects/Student_Registration/android/app/.cxx/Debug/26v1k2x3/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/HP/StudioProjects/Student_Registration/android/app/.cxx/Debug/26v1k2x3/armeabi-v7a/CMakeFiles/rebuild_cache.dir
