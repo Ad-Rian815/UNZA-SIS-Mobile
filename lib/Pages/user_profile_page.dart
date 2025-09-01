@@ -27,36 +27,13 @@ class UserProfilePageState extends State<UserProfilePage> {
   Future<void> _fetchUserProfile() async {
     try {
       final userData = await ApiService.getUserData();
-      print("User Data: $userData"); // Debugging
-
-      final computerNo = userData['computerNo'];
-      if (computerNo == null) {
-        setState(() {
-          userInfo = {"Error": "No student ID available"};
-          isLoading = false;
-        });
-        return;
-      }
-
-      final result = await ApiService.fetchStudentData(computerNo);
-      print("API Response: $result"); // Debugging
-
       if (mounted) {
         setState(() {
           isLoading = false;
-          if (result['success']) {
-            userInfo = {
-              "computerNo": userData['computerNo'] ?? "N/A",
-              "studentName": result['data']['studentName'] ?? "N/A",
-              "studentNRC": result['data']['studentNRC'] ?? "N/A",
-            };
-          } else {
-            userInfo = {"Error": result['message'] ?? "Unknown error"};
-          }
+          userInfo = userData;
         });
       }
     } catch (e) {
-      print("Fetch error: $e"); // Debugging
       if (mounted) {
         setState(() {
           userInfo = {"Error": "Failed to load data"};
@@ -72,6 +49,7 @@ class UserProfilePageState extends State<UserProfilePage> {
       setState(() {
         _image = File(pickedFile.path);
       });
+      // TODO: optionally save path to SharedPreferences if you want persistence
     }
   }
 
@@ -83,12 +61,10 @@ class UserProfilePageState extends State<UserProfilePage> {
         content: _image != null
             ? Image.file(_image!)
             : const Icon(Icons.camera_alt, size: 100),
-        actions: <Widget>[
+        actions: [
           TextButton(
             child: const Text("Close"),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ],
       ),
@@ -105,10 +81,92 @@ class UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
+  /// ✅ Change Password
+  Future<void> _showChangePasswordDialog() async {
+    final oldPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Change Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: oldPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "Old Password"),
+            ),
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "New Password"),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            child: const Text("Cancel"),
+            onPressed: () => Navigator.pop(context),
+          ),
+          ElevatedButton(
+            child: const Text("Save"),
+            onPressed: () {
+              Navigator.pop(context, {
+                "oldPassword": oldPasswordController.text,
+                "newPassword": newPasswordController.text
+              });
+            },
+          ),
+        ],
+      ),
+    );
+
+    if (result != null &&
+        result["oldPassword"]!.isNotEmpty &&
+        result["newPassword"]!.isNotEmpty) {
+      final response = await ApiService.changePassword(
+        userInfo["username"] ?? "",
+        result["oldPassword"]!,
+        result["newPassword"]!,
+      );
+
+      if (mounted) {
+        if (response['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Password changed successfully. Please log in again."),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          await Future.delayed(const Duration(seconds: 2));
+          await ApiService.logout();
+
+          if (mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginPage()),
+              (route) => false,
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response['message']),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     String fullName = userInfo['studentName'] ?? "N/A";
-    String studentID = userInfo['computerNo'] ?? "N/A";
+    String studentID = userInfo['studentNRC'] ?? userInfo['username'] ?? "N/A"; // 👈 use NRC if available
 
     return Scaffold(
       appBar: AppBar(
@@ -147,31 +205,30 @@ class UserProfilePageState extends State<UserProfilePage> {
                                 child: CircleAvatar(
                                   radius: 20,
                                   backgroundColor: Colors.white,
-                                  child: const Icon(
-                                    Icons.edit,
-                                    color: Colors.green,
-                                    size: 18,
-                                  ),
+                                  child: const Icon(Icons.edit, color: Colors.green, size: 18),
                                 ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
-                        Text("Full Name: $fullName", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text("Student ID: $studentID", style: const TextStyle(fontSize: 16)),
+                        Text("Full Name: $fullName",
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text("Student ID: $studentID",
+                            style: const TextStyle(fontSize: 16)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
                   Center(
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: _showChangePasswordDialog,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                       ),
-                      child: const Text("Change Password", style: TextStyle(color: Colors.white, fontSize: 16)),
+                      child: const Text("Change Password",
+                          style: TextStyle(color: Colors.white, fontSize: 16)),
                     ),
                   ),
                   const SizedBox(height: 20),

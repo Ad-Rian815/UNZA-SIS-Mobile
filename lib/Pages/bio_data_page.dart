@@ -21,24 +21,22 @@ class BioDataPageState extends State<BioDataPage> {
   Future<void> _fetchBioData() async {
     try {
       final userData = await ApiService.getUserData();
-      final computerNo = userData['computerNo'];
-      if (computerNo == null) {
-        setState(() {
-          bioData = {"Error": "No student ID available"};
-          isLoading = false;
-        });
-        return;
-      }
-      
-      final result = await ApiService.fetchStudentData(computerNo);
+
       if (mounted) {
         setState(() {
           isLoading = false;
-          if (result['success']) {
-            bioData = result['data'];
-          } else {
-            bioData = {"Error": result['message'] ?? "Unknown error"};
-          }
+          bioData = {
+            "school": userData['school'] ?? "N/A",
+            "campus": userData['campus'] ?? "N/A",
+            "programme": userData['program'] ?? "N/A", // 👈 fixed key
+            "major": userData['major'] ?? "N/A",
+            "computerNo": userData['username'] ?? "N/A",
+            "studentName": userData['studentName'] ?? "N/A",
+            "studentNRC": userData['studentNRC'] ?? "N/A",
+            "yearOfStudy": userData['yearOfStudy'] ?? "N/A",
+            "intake": userData['intake'] ?? "N/A",
+            // you can add more if backend provides them later
+          };
         });
       }
     } catch (e) {
@@ -75,20 +73,14 @@ class BioDataPageState extends State<BioDataPage> {
                   _buildSectionTitle("Personal Information"),
                   _buildContainer([
                     _buildDetailRow("Student ID", bioData['computerNo'] ?? "N/A"),
-                    _buildDetailRow("First Name", bioData['firstName'] ?? "N/A"),
-                    _buildDetailRow("Middle Name", bioData['middleName'] ?? "N/A"),
-                    _buildDetailRow("Surname", bioData['surname'] ?? "N/A"),
-                    _buildDetailRow("Gender", bioData['gender'] ?? "N/A"),
-                    _buildDetailRow("Date of Birth", bioData['dob'] ?? "N/A"),
-                    _buildDetailRow("NRC", bioData['nrc'] ?? "N/A"),
+                    _buildDetailRow("Full Name", bioData['studentName'] ?? "N/A"),
+                    _buildDetailRow("NRC", bioData['studentNRC'] ?? "N/A"),
+                    _buildDetailRow("Year of Study", bioData['yearOfStudy'] ?? "N/A"),
+                    _buildDetailRow("Intake", bioData['intake'] ?? "N/A"),
+                    // optional changeable fields
                     _buildDetailRow("Phone Number", bioData['phone'] ?? "N/A", changeable: true),
                     _buildDetailRow("Residential Address", bioData['residentialAddress'] ?? "N/A", changeable: true),
                     _buildDetailRow("Postal Address", bioData['postalAddress'] ?? "N/A", changeable: true),
-                    _buildDetailRow("Nationality", bioData['nationality'] ?? "N/A"),
-                    _buildDetailRow("Marital Status", bioData['maritalStatus'] ?? "N/A"),
-                    _buildDetailRow("Disability", bioData['disability'] ?? "N/A"),
-                    _buildDetailRow("Next of Kin", bioData['nextOfKin'] ?? "N/A"),
-                    _buildDetailRow("Refugee", bioData['refugeeStatus'] ?? "N/A"),
                   ]),
                 ],
               ),

@@ -1,5 +1,5 @@
-// seed.js
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");   // 🔹 switched to bcryptjs
 const User = require("./models/User");
 require("dotenv").config();
 
@@ -11,10 +11,11 @@ async function seed() {
     // Clear existing users (optional)
     await User.deleteMany();
 
+    const hashedPassword = await bcrypt.hash("2021397963", 10); // hash before saving
+
     const testStudent = new User({
       username: "2021397963",
-      password: "2021397963", // plain for now (later we can hash)
-
+      password: hashedPassword, // 🔹 hashed
       studentName: "John Banda",
       studentNRC: "123456/12/1",
       yearOfStudy: "3",

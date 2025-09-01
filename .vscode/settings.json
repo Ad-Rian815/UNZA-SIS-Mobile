@@ -1,4 +1,4 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.configuration.updateBuildConfiguration": "automatic",
     "dotnet.defaultSolution": "build/windows/x64/student_registration.sln"
 }
