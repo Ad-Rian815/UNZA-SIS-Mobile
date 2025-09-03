@@ -7,41 +7,68 @@ plugins {
 
 android {
     namespace "com.example.unza_sis_mobile"
-    compileSdkVersion 34
+    compileSdkVersion 36
 
     defaultConfig {
         applicationId "com.example.unza_sis_mobile"
         minSdkVersion 21
-        targetSdkVersion 34
-
-        // Safe fallback when flutterVersionCode/flutterVersionName are not injected
-        def fvCode = project.hasProperty('flutterVersionCode') ? project.property('flutterVersionCode') : '1'
-        def fvName = project.hasProperty('flutterVersionName') ? project.property('flutterVersionName') : '1.0'
-
-        versionCode fvCode.toInteger()
-        versionName fvName
+        targetSdkVersion 36
+        versionCode 1
+        versionName "1.0.0"
+        multiDexEnabled true
     }
 
     buildTypes {
+        debug {
+            debuggable true
+        }
         release {
-            // Keep debug signing for local builds; replace with your release config for production
-            signingConfig signingConfigs.debug
-            // Optional: enable minify/shrink for release if configured
-            // minifyEnabled false
-            // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            debuggable false
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+        checkReleaseBuilds false
+    }
+
+    // Prevent resource shrinking issues
+    aaptOptions {
+        cruncherEnabled false
+    }
+
+    // Set the installed NDK version
+    ndkVersion "25.2.9519653"
+
+    packagingOptions {
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/license.txt'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/NOTICE.txt'
+        exclude 'META-INF/notice.txt'
+        exclude 'META-INF/ASL2.0'
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'androidx.multidex:multidex:2.0.1'
 }

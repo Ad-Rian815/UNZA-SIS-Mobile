@@ -4,7 +4,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const mongoSanitize = require("express-mongo-sanitize");
-const xss = require("xss-clean");
+// const xss = require("xss-clean"); // Commented out due to compatibility issues
 const bcrypt = require("bcryptjs");   // 🔹 switched to bcryptjs
 const jwt = require("jsonwebtoken");
 const User = require("./models/User");
@@ -19,23 +19,42 @@ if (!process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// CORS whitelist
-const WHITELIST = (process.env.FRONTEND_ORIGINS || "http://localhost:8080").split(",").map(s => s.trim());
+// CORS whitelist - Updated for Flutter web development
+const WHITELIST = (process.env.FRONTEND_ORIGINS || "http://localhost:8080,http://localhost:3000,http://localhost:5000").split(",").map(s => s.trim());
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (WHITELIST.indexOf(origin) !== -1) return callback(null, true);
-    return callback(new Error("CORS policy: Origin not allowed"), false);
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) {
+      console.log("🌐 CORS: Allowing request with no origin");
+      return callback(null, true);
+    }
+    
+    // Check if origin is in whitelist
+    if (WHITELIST.indexOf(origin) !== -1) {
+      console.log(`✅ CORS: Allowing origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    console.log(`❌ CORS: Blocking origin: ${origin}`);
+    console.log(`📋 Allowed origins: ${WHITELIST.join(', ')}`);
+    return callback(new Error(`CORS policy: Origin ${origin} not allowed`), false);
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 };
+
 app.use(cors(corsOptions));
+
+// Preflight handling is already included in the cors() middleware
 
 // Middleware
 app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
 //app.use(mongoSanitize());
-app.use(xss());
+// app.use(xss()); // Commented out due to compatibility issues with newer Node.js
 
 // Logger
 app.use((req, res, next) => {
@@ -55,6 +74,47 @@ app.use("/change-password", authLimiter);
 
 // Health check
 app.get("/", (req, res) => res.json({ status: "ok" }));
+
+// Health endpoint for testing CORS
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+    cors: {
+      allowedOrigins: WHITELIST,
+      currentOrigin: req.headers.origin || 'none'
+    }
+  });
+});
+
+// Test endpoint for Flutter web development
+app.get("/test-cors", (req, res) => {
+  res.json({
+    message: "CORS test successful!",
+    origin: req.headers.origin || 'none',
+    userAgent: req.headers['user-agent'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// CORS error handler
+app.use((err, req, res, next) => {
+  if (err.message && err.message.includes('CORS policy')) {
+    console.error('❌ CORS Error:', err.message);
+    console.log('🌐 Request Origin:', req.headers.origin);
+    console.log('📋 Allowed Origins:', WHITELIST);
+    
+    return res.status(403).json({
+      error: 'CORS Error',
+      message: err.message,
+      allowedOrigins: WHITELIST,
+      currentOrigin: req.headers.origin || 'none',
+      help: 'Check if your origin is in the allowed origins list'
+    });
+  }
+  next(err);
+});
 
 // Validate username/password
 function validateCredentials(username, password) {
@@ -162,12 +222,24 @@ app.post("/change-password", async (req, res) => {
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/unza-sis";
 
-mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB connected");
-    app.listen(PORT, "0.0.0.0", () => console.log(`✅ Server running on http://localhost:${PORT}`));
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB connection error:", err.message || err);
-    process.exit(1);
+console.log("🔧 Starting server with configuration:");
+console.log(`   Port: ${PORT}`);
+console.log(`   MongoDB URI: ${MONGO_URI.substring(0, 20)}...`);
+console.log(`   CORS Origins: ${WHITELIST.join(', ')}`);
+
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log("✅ MongoDB connected successfully");
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+    console.log(`🌐 CORS enabled for origins: ${WHITELIST.join(', ')}`);
   });
+})
+.catch((err) => {
+  console.error("❌ MongoDB connection error:", err.message || err);
+  console.error("💡 Check your MONGO_URI in .env file");
+  process.exit(1);
+});

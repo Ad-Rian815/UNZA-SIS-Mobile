@@ -1,13 +1,18 @@
 buildscript {
+    ext {
+        compileSdkVersion = 35
+        targetSdkVersion = 35
+        minSdkVersion = 21
+        kotlin_version = '1.9.10'
+    }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        // Keep classpath versions close to your Gradle/AGP setup.
-        // Adjust if your project requires different AGP/Kotlin versions.
-        classpath "com.android.tools.build:gradle:7.4.2"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.20"
+        // This must be inside buildscript.dependencies
+        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -15,49 +20,18 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // optional: jitpack if any plugin needs it
-        maven { url "https://jitpack.io" }
     }
 }
 
 rootProject.buildDir = "../build"
-
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-
-    // Ensure android subprojects use consistent SDK/min/target where possible.
-    afterEvaluate { prj ->
-        if (prj.hasProperty("android")) {
-            try {
-                // Try AGP property names that vary between versions.
-                // compileSdkVersion (older), compileSdk (newer)
-                try {
-                    prj.android.compileSdkVersion = 34
-                } catch (e) {
-                    try { prj.android.compileSdk = 34 } catch(ignore) {}
-                }
-
-                // defaultConfig methods/properties differ across AGP versions:
-                // try both variants for minSdk and targetSdk
-                try {
-                    prj.android.defaultConfig.minSdkVersion = 21
-                } catch (e) {
-                    try { prj.android.defaultConfig.minSdk = 21 } catch(ignore) {}
-                }
-
-                try {
-                    prj.android.defaultConfig.targetSdkVersion = 34
-                } catch (e) {
-                    try { prj.android.defaultConfig.targetSdk = 34 } catch(ignore) {}
-                }
-            } catch (err) {
-                // keep the build log readable but don't fail configuration here
-                println("⚠️ Warning: failed to force SDK versions for project ${prj.name}: ${err.message}")
-            }
-        }
-    }
+}
+subprojects {
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
+

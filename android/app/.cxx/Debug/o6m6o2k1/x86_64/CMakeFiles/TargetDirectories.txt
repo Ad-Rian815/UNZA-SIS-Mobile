@@ -1,0 +1,2 @@
+A:/School Stuff/UNZA SIS Mobile/android/app/.cxx/Debug/o6m6o2k1/x86_64/CMakeFiles/edit_cache.dir
+A:/School Stuff/UNZA SIS Mobile/android/app/.cxx/Debug/o6m6o2k1/x86_64/CMakeFiles/rebuild_cache.dir
