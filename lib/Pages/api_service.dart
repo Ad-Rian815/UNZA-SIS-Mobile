@@ -14,6 +14,8 @@ class ApiService {
   // Base URLs for different environments
   static const String _emulatorUrl = "http://10.0.2.2:5000";
   static const String _localhostUrl = "http://localhost:5000";
+  // Compile-time override via --dart-define=API_BASE_URL=...
+  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
 
   // Optional override for testing or specific configurations
   static String? overrideBaseUrl;
@@ -23,8 +25,14 @@ class ApiService {
 
   /// Automatically determines the correct base URL based on platform
   static String get baseUrl {
+    // 1) Highest priority: runtime override
     if (overrideBaseUrl != null && overrideBaseUrl!.isNotEmpty) {
       return overrideBaseUrl!;
+    }
+
+    // 2) Compile-time --dart-define override if provided
+    if (_envBaseUrl.isNotEmpty) {
+      return _envBaseUrl;
     }
 
     if (kIsWeb) {

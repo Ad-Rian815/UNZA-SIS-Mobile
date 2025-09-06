@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:student_registration/Pages/payment_history_page.dart';
+import 'package:unza_sis_mobile/Pages/payment_history_page.dart';
 
 class FinancesPage extends StatelessWidget {
   const FinancesPage({super.key});

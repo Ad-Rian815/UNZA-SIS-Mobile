@@ -5,6 +5,19 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Load signing properties from key.properties if present
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (!keystorePropertiesFile.exists()) {
+    keystorePropertiesFile = file('key.properties')
+}
+if (!keystorePropertiesFile.exists()) {
+    keystorePropertiesFile = rootProject.file('android/key.properties')
+}
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace "com.example.unza_sis_mobile"
     compileSdkVersion 36
@@ -18,6 +31,17 @@ android {
         multiDexEnabled true
     }
 
+    signingConfigs {
+        release {
+            if (keystoreProperties.containsKey('storeFile')) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         debug {
             debuggable true
@@ -27,6 +51,7 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 

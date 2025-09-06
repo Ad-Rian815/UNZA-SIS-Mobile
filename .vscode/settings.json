@@ -1,4 +1,4 @@
 {
     "java.configuration.updateBuildConfiguration": "automatic",
-    "dotnet.defaultSolution": "build/windows/x64/student_registration.sln"
+    "dotnet.defaultSolution": "build/windows/x64/unza_sis_mobile.sln"
 }

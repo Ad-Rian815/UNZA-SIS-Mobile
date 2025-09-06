@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'Pages/login_page.dart';
 import 'Pages/dashboard_page.dart';
 import 'Pages/bio_data_page.dart';
@@ -30,6 +31,9 @@ void main() {
   if (kDebugMode) {
     HttpOverrides.global = MyHttpOverrides();
   }
+
+  // Log the effective API base URL (supports --dart-define or runtime override)
+  Logger().i('API base: ${ApiService.currentBaseUrl}');
 
   runApp(const MyApp());
 }

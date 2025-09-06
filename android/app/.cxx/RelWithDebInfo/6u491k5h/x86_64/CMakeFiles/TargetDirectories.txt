@@ -1,0 +1,2 @@
+A:/School Stuff/UNZA SIS Mobile/android/app/.cxx/RelWithDebInfo/6u491k5h/x86_64/CMakeFiles/edit_cache.dir
+A:/School Stuff/UNZA SIS Mobile/android/app/.cxx/RelWithDebInfo/6u491k5h/x86_64/CMakeFiles/rebuild_cache.dir

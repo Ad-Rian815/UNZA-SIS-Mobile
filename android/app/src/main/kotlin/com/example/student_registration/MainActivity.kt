@@ -1,4 +1,4 @@
-package com.example.student_registration
+package com.example.unza_sis_mobile
 
 import io.flutter.embedding.android.FlutterActivity
 

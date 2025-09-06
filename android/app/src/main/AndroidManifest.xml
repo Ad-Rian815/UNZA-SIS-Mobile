@@ -1,4 +1,6 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.unza_sis_mobile">
+
 
     <!-- ✅ Permissions (must be declared before <application>) -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -9,7 +11,8 @@
     <application
         android:label="UNZA SIS Mobile"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
