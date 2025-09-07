@@ -348,11 +348,42 @@ class ApiService {
         'campus': prefs.getString('campus') ?? '',
         'major': prefs.getString('major') ?? '',
         'intake': prefs.getString('intake') ?? '',
+        // Locally editable fields
+        'phone': prefs.getString('phone') ?? '',
+        'residentialAddress': prefs.getString('residentialAddress') ?? '',
+        'postalAddress': prefs.getString('postalAddress') ?? '',
         'courses': courses,
       };
     } catch (e) {
       _logger.e("Failed to get user data: $e");
       return {};
+    }
+  }
+
+  /// Updates locally stored editable profile fields
+  static Future<bool> updateUserContactInfo({
+    String? phone,
+    String? residentialAddress,
+    String? postalAddress,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      if (phone != null) {
+        await prefs.setString('phone', phone);
+      }
+      if (residentialAddress != null) {
+        await prefs.setString('residentialAddress', residentialAddress);
+      }
+      if (postalAddress != null) {
+        await prefs.setString('postalAddress', postalAddress);
+      }
+
+      _logger.i('Local contact info updated');
+      return true;
+    } catch (e) {
+      _logger.e('Failed to update contact info: $e');
+      return false;
     }
   }
 

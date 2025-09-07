@@ -72,15 +72,23 @@ class BioDataPageState extends State<BioDataPage> {
                   ]),
                   _buildSectionTitle("Personal Information"),
                   _buildContainer([
-                    _buildDetailRow("Student ID", bioData['computerNo'] ?? "N/A"),
-                    _buildDetailRow("Full Name", bioData['studentName'] ?? "N/A"),
+                    _buildDetailRow(
+                        "Student ID", bioData['computerNo'] ?? "N/A"),
+                    _buildDetailRow(
+                        "Full Name", bioData['studentName'] ?? "N/A"),
                     _buildDetailRow("NRC", bioData['studentNRC'] ?? "N/A"),
-                    _buildDetailRow("Year of Study", bioData['yearOfStudy'] ?? "N/A"),
+                    _buildDetailRow(
+                        "Year of Study", bioData['yearOfStudy'] ?? "N/A"),
                     _buildDetailRow("Intake", bioData['intake'] ?? "N/A"),
                     // optional changeable fields
-                    _buildDetailRow("Phone Number", bioData['phone'] ?? "N/A", changeable: true),
-                    _buildDetailRow("Residential Address", bioData['residentialAddress'] ?? "N/A", changeable: true),
-                    _buildDetailRow("Postal Address", bioData['postalAddress'] ?? "N/A", changeable: true),
+                    _buildDetailRow("Phone Number", bioData['phone'] ?? "N/A",
+                        changeable: true, fieldKey: 'phone'),
+                    _buildDetailRow("Residential Address",
+                        bioData['residentialAddress'] ?? "N/A",
+                        changeable: true, fieldKey: 'residentialAddress'),
+                    _buildDetailRow(
+                        "Postal Address", bioData['postalAddress'] ?? "N/A",
+                        changeable: true, fieldKey: 'postalAddress'),
                   ]),
                 ],
               ),
@@ -127,7 +135,8 @@ class BioDataPageState extends State<BioDataPage> {
     );
   }
 
-  Widget _buildDetailRow(String title, String value, {bool changeable = false}) {
+  Widget _buildDetailRow(String title, String value,
+      {bool changeable = false, String? fieldKey}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -152,7 +161,9 @@ class BioDataPageState extends State<BioDataPage> {
               ),
             ),
           ),
-          if (changeable) _buildButton("Change", () {}),
+          if (changeable)
+            _buildButton(
+                "Change", () => _onChangeField(title, fieldKey ?? '', value)),
         ],
       ),
     );
@@ -173,5 +184,51 @@ class BioDataPageState extends State<BioDataPage> {
         style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
     );
+  }
+
+  Future<void> _onChangeField(
+      String title, String fieldKey, String currentValue) async {
+    final controller =
+        TextEditingController(text: currentValue == 'N/A' ? '' : currentValue);
+    final updated = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Update $title'),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(hintText: 'Enter $title'),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(context, controller.text.trim()),
+                child: const Text('Save')),
+          ],
+        );
+      },
+    );
+
+    if (updated == null) return;
+
+    await ApiService.updateUserContactInfo(
+      phone: fieldKey == 'phone' ? updated : null,
+      residentialAddress: fieldKey == 'residentialAddress' ? updated : null,
+      postalAddress: fieldKey == 'postalAddress' ? updated : null,
+    );
+
+    // Refresh UI values from storage
+    final data = await ApiService.getUserData();
+    if (!mounted) return;
+    setState(() {
+      bioData = {
+        ...bioData,
+        'phone': data['phone'] ?? '',
+        'residentialAddress': data['residentialAddress'] ?? '',
+        'postalAddress': data['postalAddress'] ?? '',
+      };
+    });
   }
 }
