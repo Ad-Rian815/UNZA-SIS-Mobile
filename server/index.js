@@ -116,6 +116,20 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+// Simple auth middleware
+function auth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ message: 'Missing token' });
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.userId = payload.id;
+    return next();
+  } catch (e) {
+    return res.status(401).json({ message: 'Invalid or expired token' });
+  }
+}
+
 // Validate username/password
 function validateCredentials(username, password) {
   if (!username || typeof username !== "string" || username.trim().length < 3) return "Invalid username";
@@ -215,6 +229,29 @@ app.post("/change-password", async (req, res) => {
   } catch (error) {
     console.error("❌ Change password error:", error.message || error);
     return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Validate token for mobile app
+app.get('/validate-token', auth, async (req, res) => {
+  return res.json({ message: 'Token valid' });
+});
+
+// Accommodation endpoint (placeholder structure)
+app.get('/accommodation', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const acc = user.accommodation || null;
+    return res.json({
+      allocation: acc?.allocation || null,
+      roomKey: acc?.roomKey || null,
+      fixedProperty: acc?.fixedProperty || [],
+      optionalProperty: acc?.optionalProperty || [],
+    });
+  } catch (e) {
+    console.error('❌ Accommodation error:', e.message || e);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 

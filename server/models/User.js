@@ -21,6 +21,23 @@ const UserSchema = new mongoose.Schema(
         half_or_full_course: String, // "1" = Full, "0" = Half
       },
     ],
+    // Optional accommodation info
+    accommodation: {
+      allocation: {
+        hostel: String,
+        block: String,
+        level: String,
+        roomType: String,
+        roomNumber: String,
+        remark: String,
+      },
+      roomKey: {
+        key: String,
+        number: String,
+      },
+      fixedProperty: [String],
+      optionalProperty: [String],
+    },
   },
   { timestamps: true }
 );

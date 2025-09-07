@@ -489,6 +489,48 @@ class ApiService {
     }
   }
 
+  /// Fetches accommodation data from server with local fallback
+  static Future<Map<String, dynamic>> getAccommodation() async {
+    try {
+      // Attempt server fetch (endpoint may not exist yet)
+      final result = await _makeRequest(
+        endpoint: '/accommodation',
+        method: 'GET',
+        withAuth: true,
+        timeout: _shortTimeout,
+      );
+
+      if (result['success'] == true && result['data'] is Map<String, dynamic>) {
+        final data = result['data'] as Map<String, dynamic>;
+        // Persist last known data
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('accommodation', jsonEncode(data));
+        } catch (_) {}
+        return data;
+      }
+    } catch (e) {
+      _logger.w('Accommodation fetch failed, using local fallback: $e');
+    }
+
+    // Local fallback
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('accommodation');
+      if (raw != null && raw.isNotEmpty) {
+        return jsonDecode(raw) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+
+    // Default empty structure
+    return {
+      'allocation': null,
+      'roomKey': null,
+      'fixedProperty': <dynamic>[],
+      'optionalProperty': <dynamic>[],
+    };
+  }
+
   /// Gets helpful information for web development CORS issues
   static String get webDevelopmentInfo {
     if (kIsWeb) {
