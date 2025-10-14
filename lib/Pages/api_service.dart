@@ -231,6 +231,15 @@ class ApiService {
         await prefs.setString('campus', user['campus'] ?? '');
         await prefs.setString('major', user['major'] ?? '');
         await prefs.setString('intake', user['intake'] ?? '');
+        // New fields
+        await prefs.setString('sex', user['sex'] ?? '');
+        await prefs.setString('nationality', user['nationality'] ?? '');
+        await prefs.setString('sponsor', user['sponsor'] ?? '');
+        // Contact fields
+        await prefs.setString('phone', user['phone'] ?? '');
+        await prefs.setString(
+            'residentialAddress', user['residentialAddress'] ?? '');
+        await prefs.setString('postalAddress', user['postalAddress'] ?? '');
 
         // Save courses if available
         if (user['courses'] != null) {
@@ -348,7 +357,11 @@ class ApiService {
         'campus': prefs.getString('campus') ?? '',
         'major': prefs.getString('major') ?? '',
         'intake': prefs.getString('intake') ?? '',
-        // Locally editable fields
+        // New fields
+        'sex': prefs.getString('sex') ?? '',
+        'nationality': prefs.getString('nationality') ?? '',
+        'sponsor': prefs.getString('sponsor') ?? '',
+        // Contact fields
         'phone': prefs.getString('phone') ?? '',
         'residentialAddress': prefs.getString('residentialAddress') ?? '',
         'postalAddress': prefs.getString('postalAddress') ?? '',
@@ -369,17 +382,46 @@ class ApiService {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      if (phone != null) {
-        await prefs.setString('phone', phone);
-      }
-      if (residentialAddress != null) {
-        await prefs.setString('residentialAddress', residentialAddress);
-      }
-      if (postalAddress != null) {
-        await prefs.setString('postalAddress', postalAddress);
+      // Normalize inputs (ignore empty)
+      final normPhone = (phone ?? '').trim();
+      final normRes = (residentialAddress ?? '').trim();
+      final normPost = (postalAddress ?? '').trim();
+
+      final Map<String, dynamic> body = {};
+      if (normPhone.isNotEmpty) body['phone'] = normPhone;
+      if (normRes.isNotEmpty) body['residentialAddress'] = normRes;
+      if (normPost.isNotEmpty) body['postalAddress'] = normPost;
+
+      // Try server update first if there is anything to update
+      if (body.isNotEmpty) {
+        try {
+          final result = await _makeRequest(
+            endpoint: '/profile/update',
+            method: 'POST',
+            withAuth: true,
+            body: body,
+            timeout: _shortTimeout,
+          );
+          if (result['success'] != true) {
+            _logger.w('Server profile update failed, falling back to local');
+          }
+        } catch (e) {
+          _logger.w('Server profile update error: $e');
+        }
       }
 
-      _logger.i('Local contact info updated');
+      // Persist locally only non-empty values
+      if (normPhone.isNotEmpty) {
+        await prefs.setString('phone', normPhone);
+      }
+      if (normRes.isNotEmpty) {
+        await prefs.setString('residentialAddress', normRes);
+      }
+      if (normPost.isNotEmpty) {
+        await prefs.setString('postalAddress', normPost);
+      }
+
+      _logger.i('Contact info updated');
       return true;
     } catch (e) {
       _logger.e('Failed to update contact info: $e');
@@ -489,6 +531,91 @@ class ApiService {
     }
   }
 
+  /// Fetches finance summary, fees and payments for the logged-in user
+  static Future<Map<String, dynamic>> getFinances() async {
+    final result = await _makeRequest(
+      endpoint: '/finances',
+      method: 'GET',
+      withAuth: true,
+      timeout: _shortTimeout,
+    );
+    if (result['success'] == true && result['data'] is Map<String, dynamic>) {
+      return result['data'] as Map<String, dynamic>;
+    }
+    return {
+      'summary': {
+        'totalDue': 0,
+        'totalPaid': 0,
+        'outstanding': 0,
+        'standing': 'Unknown'
+      },
+      'fees': [],
+      'payments': [],
+    };
+  }
+
+  /// Fetches per-student results (courses with grades) with a local fallback
+  static Future<Map<String, dynamic>> getResults() async {
+    try {
+      final result = await _makeRequest(
+        endpoint: '/results',
+        method: 'GET',
+        withAuth: true,
+        timeout: _shortTimeout,
+      );
+
+      if (result['success'] == true && result['data'] is Map<String, dynamic>) {
+        return result['data'] as Map<String, dynamic>;
+      }
+    } catch (e) {
+      _logger.w('Results fetch failed, using local fallback: $e');
+    }
+
+    // Local fallback assembled from stored profile data
+    try {
+      final user = await getUserData();
+      final String programme = (user['program'] ?? '').toString();
+      final String yearOfStudy = (user['yearOfStudy'] ?? '').toString();
+      final List<dynamic> courses = (user['courses'] as List?) ?? [];
+
+      final mappedCourses = courses
+          .map((c) => {
+                'code': (c['code'] ?? c['courseCode'] ?? '').toString(),
+                'name': (c['name'] ?? c['courseName'] ?? '').toString(),
+                // If no grade data locally, mark as not published
+                'grade': (c['grade'] ?? '***').toString(),
+                'credits':
+                    num.tryParse('${c['credits'] ?? c['credit'] ?? 0}') ?? 0,
+                'comment': (c['comment'] ?? '').toString(),
+              })
+          .toList();
+
+      return {
+        'student': {
+          'programme': programme,
+          'yearOfStudy': yearOfStudy,
+        },
+        'academicYears': [
+          {
+            'year': 'Current',
+            'programme': programme,
+            'status': null,
+            'courses': mappedCourses,
+          }
+        ],
+      };
+    } catch (_) {
+      // final fallback
+      return {
+        'student': {
+          'programme': '',
+          'yearOfStudy': '',
+        },
+        'academicYears': <dynamic>[],
+      };
+    }
+  }
+
   /// Fetches accommodation data from server with local fallback
   static Future<Map<String, dynamic>> getAccommodation() async {
     try {
@@ -569,4 +696,32 @@ To fix this, you need to configure your server to allow CORS requests:
 
   /// Gets current effective base URL (useful for debugging)
   static String get currentBaseUrl => baseUrl;
+
+  static Future<bool> refreshProfileFromServer() async {
+    try {
+      final result = await _makeRequest(
+        endpoint: '/profile',
+        method: 'GET',
+        withAuth: true,
+        timeout: _shortTimeout,
+      );
+      if (result['success'] == true && result['data'] is Map<String, dynamic>) {
+        final data = result['data'] as Map<String, dynamic>;
+        if (data['user'] is Map<String, dynamic>) {
+          // Reuse _saveUserData shape: wrap like login payload
+          await _saveUserData({
+            'token': (await _getHeaders(withAuth: true))['Authorization']
+                    ?.replaceFirst('Bearer ', '') ??
+                '',
+            'user': data['user']
+          });
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      _logger.w('refreshProfileFromServer failed: $e');
+      return false;
+    }
+  }
 }

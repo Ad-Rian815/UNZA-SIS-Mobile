@@ -7,7 +7,7 @@ class ResearchPage extends StatelessWidget {
 Widget build(BuildContext context) {
   return Scaffold(
     appBar: AppBar(
-      title: Text("My Bio Data"),
+      title: Text("My Research"),
       backgroundColor: Colors.green[700],
     ),
     body: Center(

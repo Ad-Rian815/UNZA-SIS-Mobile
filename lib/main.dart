@@ -11,6 +11,8 @@ import 'Pages/registration_page.dart';
 import 'Pages/results_page.dart';
 import 'Pages/research_page.dart';
 import 'Pages/elearning_page.dart';
+import 'Pages/payment_history_page.dart';
+import 'Pages/confirmation_slip_page.dart';
 import 'Pages/exam_slip_page.dart';
 import 'Pages/api_service.dart';
 
@@ -78,6 +80,8 @@ class MyApp extends StatelessWidget {
         '/results': (context) => const ResultsPage(),
         '/research': (context) => const ResearchPage(),
         '/elearning': (context) => const ELearningPage(),
+        '/payment-history': (context) => const PaymentHistoryPage(),
+        '/confirmation-slip': (context) => const ConfirmationSlipPage(),
         '/exam-slip': (context) => const ExamSlipPage(),
       },
     );

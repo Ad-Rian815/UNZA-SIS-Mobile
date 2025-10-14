@@ -11,6 +11,7 @@ class BioDataPage extends StatefulWidget {
 class BioDataPageState extends State<BioDataPage> {
   Map<String, dynamic> bioData = {};
   bool isLoading = true;
+  bool _attemptedServerRefresh = false;
 
   @override
   void initState() {
@@ -21,6 +22,23 @@ class BioDataPageState extends State<BioDataPage> {
   Future<void> _fetchBioData() async {
     try {
       final userData = await ApiService.getUserData();
+
+      String phone = _na(userData['phone']);
+      String res = _na(userData['residentialAddress']);
+      String post = _na(userData['postalAddress']);
+
+      // If any is N/A and we haven't tried server refresh yet, fetch from server once
+      if (!_attemptedServerRefresh &&
+          (phone == 'N/A' || res == 'N/A' || post == 'N/A')) {
+        _attemptedServerRefresh = true;
+        final ok = await ApiService.refreshProfileFromServer();
+        if (ok) {
+          final u2 = await ApiService.getUserData();
+          phone = _na(u2['phone']);
+          res = _na(u2['residentialAddress']);
+          post = _na(u2['postalAddress']);
+        }
+      }
 
       if (mounted) {
         setState(() {
@@ -35,7 +53,10 @@ class BioDataPageState extends State<BioDataPage> {
             "studentNRC": userData['studentNRC'] ?? "N/A",
             "yearOfStudy": userData['yearOfStudy'] ?? "N/A",
             "intake": userData['intake'] ?? "N/A",
-            // you can add more if backend provides them later
+            // normalized optional fields
+            "phone": phone,
+            "residentialAddress": res,
+            "postalAddress": post,
           };
         });
       }
@@ -47,6 +68,11 @@ class BioDataPageState extends State<BioDataPage> {
         });
       }
     }
+  }
+
+  String _na(dynamic v) {
+    final s = (v ?? '').toString().trim();
+    return s.isEmpty ? 'N/A' : s;
   }
 
   @override
@@ -152,7 +178,7 @@ class BioDataPageState extends State<BioDataPage> {
                 ),
                 children: [
                   TextSpan(
-                    text: value,
+                    text: value.isEmpty ? 'N/A' : value,
                     style: const TextStyle(
                       fontWeight: FontWeight.normal,
                     ),
@@ -219,15 +245,15 @@ class BioDataPageState extends State<BioDataPage> {
       postalAddress: fieldKey == 'postalAddress' ? updated : null,
     );
 
-    // Refresh UI values from storage
+    // Refresh UI values from storage (normalize to N/A if empty)
     final data = await ApiService.getUserData();
     if (!mounted) return;
     setState(() {
       bioData = {
         ...bioData,
-        'phone': data['phone'] ?? '',
-        'residentialAddress': data['residentialAddress'] ?? '',
-        'postalAddress': data['postalAddress'] ?? '',
+        'phone': _na(data['phone']),
+        'residentialAddress': _na(data['residentialAddress']),
+        'postalAddress': _na(data['postalAddress']),
       };
     });
   }

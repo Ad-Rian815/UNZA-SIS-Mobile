@@ -10,3 +10,10 @@ flutter install
 2021397963
 2022033809
 2020034867
+flutter run -d chrome --web-port=8080
+
+# When changes are made to seed.js(backend)
+$env:JWT_SECRET='supersecretkey123'
+$env:MONGO_URI='mongodb+srv://AdRian:AdRian815@sismobile.efrwcmc.mongodb.net/unza-sis?retryWrites=true&w=majority&appName=SISmobile'
+node seed.js
+node index.js

@@ -20,7 +20,7 @@ if (!process.env.JWT_SECRET) {
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // CORS whitelist - Updated for Flutter web development
-const WHITELIST = (process.env.FRONTEND_ORIGINS || "http://localhost:8080,http://localhost:3000,http://localhost:5000").split(",").map(s => s.trim());
+const WHITELIST = (process.env.FRONTEND_ORIGINS || "http://localhost:8080,http://localhost:3000,http://localhost:5000,http://172.20.10.2:5000").split(",").map(s => s.trim());
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -199,6 +199,12 @@ app.post("/login", async (req, res) => {
         campus: user.campus,
         major: user.major,
         intake: user.intake,
+        sex: user.sex,
+        nationality: user.nationality,
+        sponsor: user.sponsor,
+        phone: user.phone,
+        residentialAddress: user.residentialAddress,
+        postalAddress: user.postalAddress,
         courses: user.courses || [],
       },
     });
@@ -237,6 +243,65 @@ app.get('/validate-token', auth, async (req, res) => {
   return res.json({ message: 'Token valid' });
 });
 
+// Profile update (contact info)
+app.post('/profile/update', auth, async (req, res) => {
+  try {
+    const { phone, residentialAddress, postalAddress } = req.body || {};
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (typeof phone === 'string') user.phone = phone;
+    if (typeof residentialAddress === 'string') user.residentialAddress = residentialAddress;
+    if (typeof postalAddress === 'string') user.postalAddress = postalAddress;
+
+    await user.save();
+
+    return res.json({
+      message: 'Profile updated',
+      user: {
+        username: user.username,
+        phone: user.phone || '',
+        residentialAddress: user.residentialAddress || '',
+        postalAddress: user.postalAddress || '',
+      }
+    });
+  } catch (e) {
+    console.error('❌ Profile update error:', e.message || e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Profile get
+app.get('/profile', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    return res.json({
+      user: {
+        username: user.username,
+        studentName: user.studentName,
+        studentNRC: user.studentNRC,
+        yearOfStudy: user.yearOfStudy,
+        program: user.program,
+        school: user.school,
+        campus: user.campus,
+        major: user.major,
+        intake: user.intake,
+        sex: user.sex,
+        nationality: user.nationality,
+        sponsor: user.sponsor,
+        phone: user.phone || '',
+        residentialAddress: user.residentialAddress || '',
+        postalAddress: user.postalAddress || '',
+        courses: user.courses || [],
+      }
+    });
+  } catch (e) {
+    console.error('❌ Profile get error:', e.message || e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Accommodation endpoint (placeholder structure)
 app.get('/accommodation', auth, async (req, res) => {
   try {
@@ -251,6 +316,54 @@ app.get('/accommodation', auth, async (req, res) => {
     });
   } catch (e) {
     console.error('❌ Accommodation error:', e.message || e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Finances endpoint - returns summary + fees + payments for current user
+app.get('/finances', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const finance = user.finance || { fees: [], payments: [] };
+
+    const totalFees = (finance.fees || []).reduce((s, f) => s + (Number(f.amount) || 0), 0);
+    const totalPayments = (finance.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const outstanding = totalFees - totalPayments;
+
+    return res.json({
+      summary: {
+        totalDue: totalFees,
+        totalPaid: totalPayments,
+        outstanding,
+        standing: outstanding > 0 ? 'In arrears' : 'Clear',
+      },
+      fees: finance.fees || [],
+      payments: finance.payments || [],
+    });
+  } catch (e) {
+    console.error('❌ Finances error:', e.message || e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Results endpoint - returns academic results for current user
+app.get('/results', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    const results = user.results || { academicYears: [] };
+    
+    return res.json({
+      student: {
+        programme: user.program || '',
+        yearOfStudy: user.yearOfStudy || '',
+      },
+      academicYears: results.academicYears || [],
+    });
+  } catch (e) {
+    console.error('❌ Results error:', e.message || e);
     return res.status(500).json({ message: 'Server error' });
   }
 });

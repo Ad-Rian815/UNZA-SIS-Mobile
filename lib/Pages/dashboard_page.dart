@@ -6,7 +6,6 @@ import 'registration_page.dart';
 import 'results_page.dart';
 import 'research_page.dart';
 import 'elearning_page.dart';
-import 'exam_slip_page.dart';
 import 'user_profile_page.dart';
 import 'login_page.dart';
 import 'qr_page.dart';
@@ -61,6 +60,10 @@ class DashboardPageState extends State<DashboardPage> {
             "campus": userData['campus'] ?? "N/A",
             "major": userData['major'] ?? "N/A",
             "intake": userData['intake'] ?? "N/A",
+            // New fields
+            "sex": userData['sex'] ?? "N/A",
+            "nationality": userData['nationality'] ?? "N/A",
+            "sponsor": userData['sponsor'] ?? "N/A",
           };
 
           studentCourses = userData['courses'] ?? [];
@@ -130,7 +133,8 @@ class DashboardPageState extends State<DashboardPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const UserProfilePage()),
+                MaterialPageRoute(
+                    builder: (context) => const UserProfilePage()),
               );
             },
           ),
@@ -149,7 +153,8 @@ class DashboardPageState extends State<DashboardPage> {
                   padding: const EdgeInsets.all(22.0),
                   child: Text(
                     announcements,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -183,7 +188,8 @@ class DashboardPageState extends State<DashboardPage> {
                           return ListTile(
                             leading: const Icon(Icons.book,
                                 color: Colors.green, size: 28),
-                            title: Text("${course['code']} - ${course['name']}"),
+                            title:
+                                Text("${course['code']} - ${course['name']}"),
                             subtitle: Text(
                                 "Type: ${course['half_or_full_course'] == '1' ? "Full" : "Half"}"),
                           );
@@ -227,15 +233,18 @@ class DashboardPageState extends State<DashboardPage> {
             ),
           ),
           _buildDrawerItem("My Bio Data", Icons.person, const BioDataPage()),
-          _buildDrawerItem("My Accommodation", Icons.house, const AccommodationPage()),
+          _buildDrawerItem(
+              "My Accommodation", Icons.house, const AccommodationPage()),
           _buildDrawerItem("My Finances", Icons.money, const FinancesPage()),
-          _buildDrawerItem("My Registration", Icons.check_box, const RegistrationPage()),
+          _buildDrawerItem(
+              "My Registration", Icons.check_box, const RegistrationPage()),
           _buildDrawerItem("My Results", Icons.bar_chart, const ResultsPage()),
           _buildDrawerItem("My Research", Icons.search, const ResearchPage()),
-          _buildDrawerItem("My E-Learning", Icons.laptop, const ELearningPage()),
-          _buildDrawerItem("My Exam Slip", Icons.assignment, const ExamSlipPage()),
+          _buildDrawerItem(
+              "My E-Learning", Icons.laptop, const ELearningPage()),
           _buildDrawerItem("QR Code", Icons.qr_code, const QRPage()),
-          _buildDrawerItem("Assignments", Icons.assignment_turned_in, const AssignmentsPage()),
+          _buildDrawerItem("Assignments", Icons.assignment_turned_in,
+              const AssignmentsPage()),
 
           const Divider(),
 
@@ -281,6 +290,10 @@ class DashboardPageState extends State<DashboardPage> {
       _buildDetailRow("Campus:", studentInfo["campus"]),
       _buildDetailRow("Major:", studentInfo["major"]),
       _buildDetailRow("Intake:", studentInfo["intake"]),
+      // New details
+      _buildDetailRow("Sex:", studentInfo["sex"]),
+      _buildDetailRow("Nationality:", studentInfo["nationality"]),
+      _buildDetailRow("Sponsor:", studentInfo["sponsor"]),
     ];
   }
 
