@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:unza_sis_mobile/Pages/api_service.dart';
+import 'package:printing/printing.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
 
 class ResultsPage extends StatelessWidget {
   const ResultsPage({super.key});
@@ -15,7 +18,7 @@ class ResultsPage extends StatelessWidget {
             tooltip: 'Export Results',
             icon: const Icon(Icons.print),
             onPressed: () async {
-              // TODO: Implement PDF export
+              await _exportResultsPdf(context);
             },
           ),
         ],
@@ -78,6 +81,193 @@ class ResultsPage extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _exportResultsPdf(BuildContext context) async {
+    try {
+      final user = await ApiService.getUserData();
+      final results = await ApiService.getResults();
+      final academicYears = (results['academicYears'] as List<dynamic>? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+      final pdf = pw.Document();
+
+      // Header styles
+      final headerStyle = pw.TextStyle(
+        fontSize: 18,
+        fontWeight: pw.FontWeight.bold,
+      );
+      final sectionTitleStyle = pw.TextStyle(
+        fontSize: 14,
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.green800,
+      );
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageTheme: pw.PageTheme(
+            margin: const pw.EdgeInsets.all(24),
+          ),
+          build: (context) => [
+            // Title
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(_sanitizePlain('UNZA - Student Course Results'),
+                    style: headerStyle),
+                pw.Text(
+                  _sanitizePlain(_formatNow()),
+                  style: const pw.TextStyle(
+                      fontSize: 10, color: PdfColors.grey700),
+                )
+              ],
+            ),
+            pw.SizedBox(height: 8),
+
+            // Student info
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                color: PdfColors.grey100,
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                      _sanitizePlain(
+                          'Computer number: ${user['username'] ?? ''}'),
+                      style: const pw.TextStyle(fontSize: 11)),
+                  pw.Text(_sanitizePlain('Names: ${user['studentName'] ?? ''}'),
+                      style: const pw.TextStyle(fontSize: 11)),
+                  pw.Text(_sanitizePlain('Gender: ${user['sex'] ?? ''}'),
+                      style: const pw.TextStyle(fontSize: 11)),
+                  pw.Text(_sanitizePlain('Programme: ${user['program'] ?? ''}'),
+                      style: const pw.TextStyle(fontSize: 11)),
+                  pw.Text(
+                      _sanitizePlain(
+                          'Year of Study: ${user['yearOfStudy'] ?? ''}'),
+                      style: const pw.TextStyle(fontSize: 11)),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 12),
+
+            // Academic years
+            if (academicYears.isEmpty)
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey200,
+                  borderRadius: pw.BorderRadius.circular(4),
+                ),
+                child: pw.Center(
+                  child: pw.Text('No results available yet.',
+                      style: const pw.TextStyle(color: PdfColors.grey700)),
+                ),
+              )
+            else
+              ...academicYears.map((ay) {
+                final String year =
+                    _sanitizePlain((ay['year'] ?? '').toString());
+                final String programme =
+                    _sanitizePlain((ay['programme'] ?? '').toString());
+                final String? status = ay['status'] == null
+                    ? null
+                    : _sanitizePlain(ay['status'].toString());
+                final List<Map<String, dynamic>> courses =
+                    (ay['courses'] as List?)
+                            ?.map((e) => Map<String, dynamic>.from(e))
+                            .toList() ??
+                        [];
+
+                return pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('$year - $programme', style: sectionTitleStyle),
+                    if (status != null)
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(top: 2),
+                        child: pw.Text(_sanitizePlain('Status: $status'),
+                            style: const pw.TextStyle(
+                                color: PdfColors.red800, fontSize: 10)),
+                      ),
+                    pw.SizedBox(height: 6),
+                    pw.Table(
+                      border: pw.TableBorder.all(
+                          color: PdfColors.grey400, width: 0.5),
+                      columnWidths: {
+                        0: const pw.FlexColumnWidth(2),
+                        1: const pw.FlexColumnWidth(6),
+                        2: const pw.FlexColumnWidth(2),
+                      },
+                      children: [
+                        pw.TableRow(
+                          decoration:
+                              const pw.BoxDecoration(color: PdfColors.grey300),
+                          children: [
+                            _cell('CODE', bold: true),
+                            _cell('COURSE', bold: true),
+                            _cell('GRADE', bold: true),
+                          ],
+                        ),
+                        ...courses.map((c) => pw.TableRow(children: [
+                              _cell(
+                                  _sanitizePlain((c['code'] ?? '').toString())),
+                              _cell(
+                                  _sanitizePlain((c['name'] ?? '').toString())),
+                              _cell(_sanitizePlain(
+                                  (c['grade'] ?? '***').toString())),
+                            ])),
+                      ],
+                    ),
+                    pw.SizedBox(height: 12),
+                  ],
+                );
+              }),
+          ],
+        ),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: 'UNZA_Results_${user['username'] ?? 'student'}.pdf',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export PDF: $e')),
+        );
+      }
+    }
+  }
+
+  pw.Widget _cell(String text, {bool bold = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: pw.Text(
+        _sanitizePlain(text),
+        style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal),
+      ),
+    );
+  }
+
+  String _formatNow() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _sanitizePlain(String input) {
+    // Remove emoji and special pictographic symbols often unsupported in PDFs or undesired in official docs
+    final regex = RegExp(
+      r'[\u{1F300}-\u{1FAFF}\u{1F900}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{2600}-\u{27BF}\uFE0F]',
+      unicode: true,
+    );
+    return input.replaceAll(regex, '');
   }
 
   List<Widget> _buildAcademicYearsFromData(List<dynamic> academicYears) {

@@ -99,7 +99,7 @@ async function seed() {
       studentName: "Beenzu Hadombe Milimo",
       studentNRC: "663094/10/1",
       yearOfStudy: "5",
-      program: "BSc Computer Science",
+      program: "Bachelor of Medicine and Surgery",
       school: "School of Medicine",
       campus: "Ridgeway Campus",
       major: "Medicine and Surgery",
